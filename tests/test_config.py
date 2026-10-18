@@ -43,3 +43,21 @@ def test_empty_values_use_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = Settings(_env_file=None)
     assert settings.archive_channel_id is None
     assert settings.geo_max_distance_m == 50
+
+
+def test_telegram_api_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Бот ходит на адрес Bot API из TELEGRAM_API_URL (без сетевых запросов)."""
+    from bot.app import create_bot
+
+    monkeypatch.setenv("BOT_TOKEN", "42:TEST")
+    monkeypatch.setenv("TELEGRAM_API_URL", "http://localhost:8081/")
+    bot = create_bot(Settings(_env_file=None))
+    assert bot.session.api.api_url("42:TEST", "getMe") == "http://localhost:8081/bot42:TEST/getMe"
+
+
+def test_bot_requires_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    from bot.app import create_bot
+
+    monkeypatch.delenv("BOT_TOKEN", raising=False)
+    with pytest.raises(SystemExit):
+        create_bot(Settings(_env_file=None))

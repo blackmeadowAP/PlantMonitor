@@ -3,10 +3,9 @@
 import asyncio
 import logging
 
-from aiogram import Bot
 from aiogram.fsm.storage.redis import RedisStorage
 
-from bot.app import create_dispatcher
+from bot.app import create_bot, create_dispatcher
 from core.config import get_settings
 from core.db import get_sessionmaker
 from core.logging import setup_logging
@@ -18,11 +17,7 @@ async def main() -> None:
     """Запуск long polling с FSM-хранилищем в Redis."""
     settings = get_settings()
     setup_logging(settings.log_level)
-    token = settings.bot_token.get_secret_value()
-    if not token:
-        raise SystemExit("BOT_TOKEN не задан: заполните .env")
-
-    bot = Bot(token=token)
+    bot = create_bot(settings)
     storage = RedisStorage.from_url(settings.redis_url)
     dp = create_dispatcher(get_sessionmaker(), storage)
     logger.info("Бот запускается (long polling)")

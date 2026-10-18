@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     # Telegram
     bot_token: SecretStr = SecretStr("")
+    # Адрес Bot API: облачный Telegram или свой Local Bot API Server
+    telegram_api_url: str = "https://api.telegram.org"
     archive_channel_id: int | None = None
 
     # Общие

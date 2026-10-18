@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession, async_sessionmaker
 
 from core.db import create_engine
 
@@ -37,12 +37,24 @@ async def db_engine() -> AsyncIterator[AsyncEngine]:
 
 
 @pytest.fixture
-async def session(db_engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
-    """Сессия в транзакции, которая откатывается после теста."""
+async def db_conn(db_engine: AsyncEngine) -> AsyncIterator[AsyncConnection]:
+    """Соединение в транзакции, которая откатывается после теста."""
     async with db_engine.connect() as conn:
         trans = await conn.begin()
-        async with AsyncSession(
-            bind=conn, expire_on_commit=False, join_transaction_mode="create_savepoint"
-        ) as s:
-            yield s
+        yield conn
         await trans.rollback()
+
+
+@pytest.fixture
+def sessionmaker(db_conn: AsyncConnection) -> async_sessionmaker[AsyncSession]:
+    """Фабрика сессий поверх тестовой транзакции: commit внутри теста — это savepoint."""
+    return async_sessionmaker(
+        bind=db_conn, expire_on_commit=False, join_transaction_mode="create_savepoint"
+    )
+
+
+@pytest.fixture
+async def session(sessionmaker: async_sessionmaker[AsyncSession]) -> AsyncIterator[AsyncSession]:
+    """Сессия тестовой БД; все изменения откатываются после теста."""
+    async with sessionmaker() as s:
+        yield s

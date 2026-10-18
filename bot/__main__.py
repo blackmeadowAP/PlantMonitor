@@ -6,6 +6,7 @@ import logging
 from aiogram.fsm.storage.redis import RedisStorage
 
 from bot.app import create_bot, create_dispatcher
+from bot.profile import setup_profile
 from core.config import get_settings
 from core.db import get_sessionmaker
 from core.logging import setup_logging
@@ -20,6 +21,7 @@ async def main() -> None:
     bot = create_bot(settings)
     storage = RedisStorage.from_url(settings.redis_url)
     dp = create_dispatcher(get_sessionmaker(), storage)
+    dp.startup.register(setup_profile)
     logger.info("Бот запускается (long polling)")
     try:
         await dp.start_polling(bot)

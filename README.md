@@ -24,4 +24,5 @@ cp .env.example .env
 docker compose up -d
 docker compose run --rm app alembic upgrade head
 docker compose run --rm app python -m scripts.seed
+docker compose run --rm app python -m scripts.create_admin --tg-id <ваш Telegram ID> --name "Имя"
 ```

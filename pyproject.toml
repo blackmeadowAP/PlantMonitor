@@ -1,0 +1,66 @@
+[project]
+name = "agro-monitor"
+version = "0.1.0"
+description = "Оперативный сбор данных о болезнях сельскохозяйственных культур"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # Telegram-бот
+    "aiogram>=3.13,<4",
+    # API для Mini App
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    # БД
+    "sqlalchemy[asyncio]>=2.0.30,<2.1",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "geoalchemy2>=0.15",
+    # Очередь и расписание
+    "redis>=5.0",
+    "arq>=0.26",
+    "apscheduler>=3.10,<4",
+    # Файлы
+    "boto3>=1.34",
+    # Изображения
+    "pillow>=10.4",
+    "opencv-python-headless>=4.10",
+    # Отчёты
+    "jinja2>=3.1",
+    "weasyprint>=62",
+    "matplotlib>=3.9",
+    "staticmap>=0.5.7",
+    # ML и LLM
+    "onnxruntime>=1.18",
+    "openai>=1.40",
+    # Конфигурация
+    "pydantic-settings>=2.4",
+    "tzdata>=2024.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ASYNC", "SIM", "RUF"]
+# Тексты и docstring на русском — кириллица в строках допустима
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+markers = ["db: тесты, которым нужна тестовая БД PostGIS"]

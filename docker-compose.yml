@@ -1,0 +1,101 @@
+x-app: &app
+  build: .
+  image: agro-monitor-app
+  env_file: .env
+  volumes:
+    - .:/app
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+    minio:
+      condition: service_started
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agro}
+      POSTGRES_DB: ${POSTGRES_DB:-agro}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Тестовая БД: без тома, данные не сохраняются
+  db_test:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: agro
+      POSTGRES_PASSWORD: agro
+      POSTGRES_DB: agro_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agro -d agro_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  # Разовые команды: alembic, seed, pytest
+  app:
+    <<: *app
+    profiles: ["tools"]
+    command: ["python", "-c", "print('app: используйте docker compose run --rm app <команда>')"]
+    depends_on:
+      db:
+        condition: service_healthy
+      db_test:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  bot:
+    <<: *app
+    command: ["python", "-m", "bot"]
+    restart: unless-stopped
+
+  api:
+    <<: *app
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    command: ["arq", "worker.main.WorkerSettings"]
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  redis_data:
+  minio_data:
